@@ -1,18 +1,13 @@
+from typing import Optional
+
 from langchain_core.messages import HumanMessage
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, SimpleJsonOutputParser
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate, MessagesPlaceholder, ChatPromptTemplate, \
     FewShotChatMessagePromptTemplate
-from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
 
-from new_langchaing_practice.env_util import OPENAI_API_KEY, OPENAI_BASE_URL
+from new_langchaing_practice.models import llm
 
-llm = ChatOpenAI(
-    model = 'gpt-4.1-nano',
-    temperature = 0.8,
-    api_key = OPENAI_API_KEY,
-    base_url = OPENAI_BASE_URL,
-    max_tokens = 200
-)
 
 # TODO: Let LLM answer the question with different style by adjusting the system message
 # message = [
@@ -100,35 +95,98 @@ llm = ChatOpenAI(
 # print(resp.content)
 
 # TODO: ICL in chat template
-examples = [
-    {"input" : "2 🦜 2", "output" : "5"},
-    {"input" : "3 🦜 2", "output" : "7"},
-    {"input" : "4 🦜 6", "output" : "25"}
-]
+# examples = [
+#     {"input" : "2 🦜 2", "output" : "5"},
+#     {"input" : "3 🦜 2", "output" : "7"},
+#     {"input" : "4 🦜 6", "output" : "25"}
+# ]
+#
+# base_prompt = ChatPromptTemplate.from_messages(
+#     [
+#         ("human", "{input}"),
+#         ("ai", "{output}")
+#     ]
+# )
+#
+# few_shot_prompt = FewShotChatMessagePromptTemplate(
+#     examples = examples,
+#     example_prompt = base_prompt
+# )
+#
+# prompt_template = ChatPromptTemplate.from_messages(
+#     [
+#         ("system", "You are a smart AI assistant. " "The following examples show how to interpret 🦜."),
+#         # Must ask the model to learn from the examples
+#         few_shot_prompt,
+#         MessagesPlaceholder("msg")
+#     ]
+# )
+#
+# chain = prompt_template | llm | StrOutputParser()
+#
+# resp = chain.invoke({"msg" : [HumanMessage(content = "What is 5 🦜 8?")]})
+#
+# print(resp)
 
-base_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("human", "{input}"),
-        ("ai", "{output}")
-    ]
-)
+# TODO output parser
 
-few_shot_prompt = FewShotChatMessagePromptTemplate(
-    examples = examples,
-    example_prompt = base_prompt
-)
+# prompt_template = ChatPromptTemplate.from_messages(
+#     [
+#         ("system", "You are a smart AI assistant. "),
+#         MessagesPlaceholder("msg")
+#     ]
+# )
+#
+# chain = prompt_template | llm | StrOutputParser()
+# # StrOutputParser will only return the string of the model output
+#
+# resp = chain.invoke({"msg" : [HumanMessage(content = "Can you tell me a joke about Japanese? ")]})
+#
+# print(resp)
 
-prompt_template = ChatPromptTemplate.from_messages(
-    [
-        ("system", "You are a smart AI assistant. " "The following examples show how to interpret 🦜."),
-        # Must ask the model to learn from the examples
-        few_shot_prompt,
-        MessagesPlaceholder("msg")
-    ]
-)
+# TODO: structured output
+# class Joke(BaseModel):
+#     """
+#     BaseModel is a data model class
+#     """
+#     setup : str = Field(description = "beginning of the joke")
+#     punchline: str = Field(description="the fun part of the joke")
+#     rating: Optional[str] = Field(description="the level of fun of the joke, from 1 to 10")
+#
+# prompt_template = PromptTemplate.from_template("Generate a joke about {topic}.")
+# runnable = llm.with_structured_output(Joke)
+#
+# chain = prompt_template | runnable
+#
+# resp = chain.invoke({"topic" : "Indians"})
+#
+# print(resp)
+# print(resp.__dict__)
 
-chain = prompt_template | llm | StrOutputParser()
+# TODO: SimpleJsonOutputParser
+# prompt_template = PromptTemplate.from_template(
+#     "Try your best to answer the user's question"
+#     "You must output a JSON object that includes keys of 'answer' and 'followup_question', 'answer' is the reply to user's question, 'followup_question' is the possible question that user may ask next."
+#     "{question}"
+# )
+#
+# chain = prompt_template | llm | SimpleJsonOutputParser()
+#
+# resp = chain.invoke({"question" : "What makes a man attractive?"})
+#
+# print(resp)
 
-resp = chain.invoke({"msg" : [HumanMessage(content = "What is 5 🦜 8?")]})
+# TODO .bind_tools to structure the output
+# This requires high-level of natural language understanding and small models like gpt-4.1-nano doesn't do it well.
+class ResponseFormatter(BaseModel):
+    """Use this tool to structure your response to the user"""
 
+    answer: str = Field(description="response to the user")
+    followup_question: str = Field(description="the question that the users may ask next.")
+
+runnable = llm.bind_tools([ResponseFormatter])
+
+resp = runnable.invoke("Which country uses most electricity in the world?")
+# print(resp.tool_calls[-1]['args'])
 print(resp)
+resp.pretty_print()

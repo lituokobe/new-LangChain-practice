@@ -3,6 +3,9 @@ from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnableWithMessageHistory, RunnablePassthrough
 from new_langchaing_practice.models import llm
+import gradio as gr
+from openai import OpenAI
+from new_langchaing_practice.env_util import OPENAI_API_KEY
 
 # We make the system message dynamic, so that it can handle the summarized context
 # We put the summarized context to system message because the next node - RunnableWithMessageHistory only takes 2 input variables: input_messages_key, history_messages_key
@@ -92,11 +95,68 @@ final_chain = RunnablePassthrough.assign(messages_summarized = summarize_message
     system_message = lambda x : f"You are an assistant who tries to answer all the questions. Previous chat abstract: {x["messages_summarized"]["summary"].content}" if x["messages_summarized"].get("summary") else "No abstract"
 ) | chain_with_message_history
 
-result1 = final_chain.invoke({"input" :"Hi, my name is Luis.", "config" : {"configurable" : {"session_id" : "bbn123"}}}, config = {"configurable" : {"session_id" : "bbn123"}} )
-print(result1.content)
+# result1 = final_chain.invoke({"input" :"Hi, my name is Luis.", "config" : {"configurable" : {"session_id" : "bbn123"}}}, config = {"configurable" : {"session_id" : "bbn123"}} )
+# print(result1.content)
+#
+# result2 = final_chain.invoke({"input" :"What is my name?", "config" : {"configurable" : {"session_id" : "bbn123"}}}, config = {"configurable" : {"session_id" : "bbn123"}})
+# print(result2.content)
+#
+# result2 = final_chain.invoke({"input" :"I want to have a Chinese name that matches my Spanish name.", "config" : {"configurable" : {"session_id" : "bbn123"}}}, config = {"configurable" : {"session_id" : "bbn123"}})
+# print(result2.content)
 
-result2 = final_chain.invoke({"input" :"What is my name?", "config" : {"configurable" : {"session_id" : "bbn123"}}}, config = {"configurable" : {"session_id" : "bbn123"}})
-print(result2.content)
+# web UI's core function
+def add_message(chat_history, user_message):
+    if user_message:
+        chat_history.append({"role":"user","content":user_message})
+    return chat_history, "" # empty string means clear the text input area
 
-result2 = final_chain.invoke({"input" :"I want to have a Chinese name that matches my Spanish name.", "config" : {"configurable" : {"session_id" : "bbn123"}}}, config = {"configurable" : {"session_id" : "bbn123"}})
-print(result2.content)
+def execute_chain(chat_history):
+    input = chat_history[-1]
+    result = final_chain.invoke({"input": input["content"], "config": {"configurable": {"session_id": "bbn123"}}},
+                                config={"configurable": {"session_id": "bbn123"}})
+    chat_history.append({"role" : "assistant", "content" : result.content})
+    return chat_history
+
+def read_audio(audio_message):
+    """
+    Read audio file
+    """
+    # print(audio_message)
+    if audio_message:
+        client = OpenAI(api_key=OPENAI_API_KEY, )
+        audio_file = open(audio_message,"rb")
+        transcription = client.audio.transcriptions.create(
+            model="gpt-4o-mini-transcribe",
+            file=audio_file,
+        )
+        text = transcription.text
+        return text
+    return ""
+
+#TODO: use Gradio to develop a GUI for the chatbot
+with gr.Blocks(title = "Multimodal Chatbot", theme = gr.themes.Soft()) as block:
+    # chat history
+    chatbot = gr.Chatbot(type = "messages", height = 500, label = "Chatbot")
+
+    with gr.Row():
+        # text input area
+        with gr.Column(scale = 4):
+            user_input = gr.Textbox(placeholder = "Please send message to the chatbot...", label = "text input", max_lines = 5)
+            submit_btn = gr.Button("Send", variant = "primary") # variant means the design of the label
+        #voice input area
+        with gr.Column(scale = 1):
+            audio_input = gr.Audio(sources = ["microphone"], label = "voice input", type = "filepath", format = "wav")
+
+    # text area submission event, you can press "Enter" to submit
+    chat_msg = user_input.submit(add_message, [chatbot, user_input], [chatbot, user_input])
+    chat_msg.then(execute_chain, chatbot, chatbot)
+
+    # voice area change event
+    audio_input.change(read_audio, [audio_input], [user_input])
+
+    # button click event, use the submit button to submit
+    submit_btn.click(add_message, [chatbot, user_input], [chatbot, user_input]).then(execute_chain, chatbot, chatbot)
+
+
+if __name__ == "__main__":
+    block.launch()

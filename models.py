@@ -26,10 +26,10 @@ llm = ChatOpenAI(
 #     base_url = ALI_BASE_URL,
 #     max_tokens = 200
 # )
-multimodal_llm = ChatTongyi(
-    # model_name="qwen-vl-max",
-    model_name="qwen2.5-omni-7b",
-    dashscope_api_key=ALI_API_KEY,
-    temperature=0.8,
-    max_tokens=200
-)
+# multimodal_llm = ChatTongyi(
+#     # model_name="qwen-vl-max",
+#     model_name="qwen2.5-omni-7b",
+#     dashscope_api_key=ALI_API_KEY,
+#     temperature=0.8,
+#     max_tokens=200
+# )

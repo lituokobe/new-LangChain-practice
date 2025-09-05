@@ -5,20 +5,29 @@ from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.prebuilt.chat_agent_executor import AgentState
+
+from new_langchaing_practice.langgraph_demo.src.agent.tools.tool_args_description_practice import calculate4
+from new_langchaing_practice.langgraph_demo.src.agent.tools.tools_runnable import runnable_tool
+from new_langchaing_practice.langgraph_demo.src.agent.tools.tools_BaseTool import my_search_tool
+from new_langchaing_practice.langgraph_demo.src.agent.tools.tools_get_user_info import get_user_info_by_name
+from new_langchaing_practice.langgraph_demo.src.agent.tools.tools_get_user_info import get_user_name, greet_user
+from new_langchaing_practice.langgraph_demo.src.agent.my_state import CustomState
 """
 Because we are running this project on LangGraph server, so the file import way below follows the
 instruction of LangGraph server import requirements. You will fail to import if you directly run in on
 Pycharm platform.
+
+In langgraph.json, it is set up this way:
+"agent": "./src/agent/graph.py:graph"
 """
+# from src.agent.tools.tool_args_description_practice import calculate4
+# from src.agent.tools.tools_runnable import runnable_tool
+# from src.agent.tools.tools_BaseTool import my_search_tool
+# from src.agent.tools.tools_get_user_info import get_user_info_by_name
+# from src.agent.tools.tools_get_user_info import get_user_name, greet_user
+# from src.agent.my_state import CustomState
 
-from src.agent.tools.tool_args_description_practice import calculate4
-from src.agent.tools.tools_runnable import runnable_tool
-from src.agent.tools.tools_BaseTool import my_search_tool
-from src.agent.tools.tools_get_user_info import get_user_info_by_name
 from dotenv import load_dotenv
-from src.agent.tools.tools_get_user_info import get_user_name, greet_user
-from src.agent.my_state import CustomState
-
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

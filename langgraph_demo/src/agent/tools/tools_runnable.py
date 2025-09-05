@@ -1,7 +1,6 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
-
 from new_langchaing_practice.models import llm
 
 prompt = (
@@ -23,9 +22,9 @@ runnable_tool = chain.as_tool(
     args_schema = ToolArgs,
 )
 
-print(runnable_tool.args_schema.model_json_schema())
-print(runnable_tool.name)
-print(runnable_tool.description)
+# print(runnable_tool.args_schema.model_json_schema())
+# print(runnable_tool.name)
+# print(runnable_tool.description)
 
 # resp = chain.invoke({"topic":"basketball", "language":"Chinese"})
 # print(resp.content)

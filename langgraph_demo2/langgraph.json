@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "agent": "./src/agent/graph3_toolnode.py:agent"
+  },
+  "env": ".env",
+  "image_distro": "wolfi"
+}

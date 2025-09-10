@@ -5,7 +5,7 @@ from langgraph.constants import START, END
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 
-from src.agent.my_llm import llm
+from new_langchaing_practice.langgraph_demo2.src.agent.my_llm import llm
 
 class State(TypedDict):
     """

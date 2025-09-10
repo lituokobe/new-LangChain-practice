@@ -6,10 +6,12 @@ from typing import Any, Dict, List
 from dotenv import load_dotenv
 from langchain_core.messages import ToolMessage, AIMessage
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.constants import END, START
 from langgraph.graph import MessagesState, StateGraph
+from langgraph.types import interrupt, Command
 
-from src.agent.my_llm import llm
+from new_langchaing_practice.langgraph_demo2.src.agent.my_llm import llm
 
 # TODO: Create MCPs
 load_dotenv()
@@ -70,6 +72,25 @@ class BasicToolsNode:
         if not (messages := state.get("messages")): # walrus operator (:=) allows you to assign a value to a variable as part of an expression
             raise ValueError("No message found in input.")
         message: AIMessage = messages[-1]
+
+        # add interruption, only for search tool call
+        tool_name = message.tool_calls[0]["name"] if message.tool_calls else None
+        if tool_name == "webSearchStd" or tool_name == "webSearchPro":
+            response = interrupt(
+                f"AI model tries to call {tool_name}\n"
+                "Input 'y' to approve or directly provide answer for the tool call."
+            )
+            # response: tool call result or rejection reason input by human
+            if response["answer"] == "y":
+                pass
+            else:
+                return {
+                    "messages":[ToolMessage(
+                        content = f"Human end the tool call, the reason is {response['answer']}",
+                        name=tool_name,
+                        tool_call_id=message.tool_calls[0]["id"]
+                    )]
+                }
 
         # Concurrent run tool calls
         outputs = await self._execute_tool_calls(message.tool_calls)
@@ -184,8 +205,62 @@ async def create_graph():
         "chatbot"
     )
 
-    graph = builder.compile()
+    memory = MemorySaver()
+    graph = builder.compile(checkpointer=memory)
 
     return graph
 
-agent = asyncio.run(create_graph())
+# agent = asyncio.run(create_graph())
+async def run_graph():
+    graph = await create_graph()
+    config = {
+        "configurable":{
+            "thread_id":"luis123"
+        }
+    }
+
+    def print_message(event, result):
+        """formatted message output"""
+        messages = event.get("messages")
+        if messages:
+            if isinstance(messages, list):
+                message = messages[-1]
+            if message.__class__.__name__ == "AIMessage":
+                if message.content:
+                    result = message.content
+            msg_repr = message.pretty_repr(html=True)
+            if len(msg_repr) > 1500:
+                msg_repr = msg_repr[:1500] + "... and more"
+            print(msg_repr)
+        return result
+
+    async def execute_graph(user_input: str) -> str:
+        """function to execute workflow"""
+        result = "" # last message from AI assistant
+        current_state = graph.get_state(config)
+        if current_state.next:
+            human_command = Command(resume={"answer":user_input})
+            async for chunk in graph.astream(human_command, config, stream_mode="values"):
+                result = print_message(chunk, result)
+
+            return result
+        else:
+            async for chunk in graph.astream({"messages":("user",user_input)}, config, stream_mode="values"):
+                result = print_message(chunk, result)
+                if chunk.get("__interrupt__", None):
+                    print(chunk["__interrupt__"])
+                    # result = f"AI"
+
+        current_state = graph.get_state(config)
+        if current_state.next:
+            result = current_state.interrupts[0].value
+
+        return result
+
+    while True:
+        user_input = input("User: ")
+        resp = await execute_graph(user_input)
+        print("AI: ", resp)
+
+if __name__ == '__main__':
+    asyncio.run(run_graph())

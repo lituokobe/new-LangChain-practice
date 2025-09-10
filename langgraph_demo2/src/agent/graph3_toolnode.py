@@ -21,14 +21,14 @@ zhipu_mcp_server_config = {
 }
 
 # MCPs from modelscope
-# 12306 MCP
+# 12306 MCP, visit https://modelscope.cn/mcp/servers/@Joooook/12306-mcp to update url
 my12306_mcp_server_config = {
-    "url" : "https://mcp.api-inference.modelscope.net/cebe8ee5aa2a44/sse",
+    "url" : "https://mcp.api-inference.modelscope.net/23ff105a9f6b4b/sse",
     "transport" : "sse",
 }
-# chart visualization
+# chart visualization, visit https://modelscope.cn/mcp/servers/@antvis/mcp-server-chart to update url
 chart_mcp_server_config = {
-    "url" : "https://mcp.api-inference.modelscope.net/90c6f438dc1640/sse",
+    "url" : "https://mcp.api-inference.modelscope.net/4206bdd2532946/sse",
     "transport" : "sse",
 }
 

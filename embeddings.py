@@ -102,7 +102,7 @@ print(len(resp[0]))
 # print(resp[0])
 # print(len(resp[0]))
 
-#TODO: Integrate Qwen3-Embedding with LangChain class
+# TODO: Integrate Qwen3-Embedding with LangChain class
 # As of Aug 2025, Qwen3-Embedding is not directly supported by LangChain. We can self create a class to make it happen
 # This will be a good example for future possible customization.
 

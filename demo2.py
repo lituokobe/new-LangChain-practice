@@ -17,7 +17,7 @@ def on_start(run_obj: Run):
     :param run_obj:
     :return:
     """
-    print("ri is initialized at ", run_obj.start_time)
+    print("r1 is initialized at ", run_obj.start_time)
 
 def on_end(run_obj: Run):
     """
@@ -25,7 +25,7 @@ def on_end(run_obj: Run):
     :param run_obj:
     :return:
     """
-    print("ri is ended at ", run_obj.end_time)
+    print("r1 is ended at ", run_obj.end_time)
 
 chain = r1.with_listeners(on_start = on_start, on_end = on_end)
 chain.invoke(2)

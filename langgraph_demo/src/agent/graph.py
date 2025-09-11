@@ -14,7 +14,7 @@ from new_langchaing_practice.langgraph_demo.src.agent.tools.tools_get_user_info 
 from new_langchaing_practice.langgraph_demo.src.agent.my_state import CustomState
 """
 Because we are running this project on LangGraph server, so the file import way below follows the
-instruction of LangGraph server import requirements. You will fail to import if you directly run in on
+import requirements when this langgragh_demo folder is set the main folder for this project. You will fail to import if you directly run in on
 Pycharm platform.
 
 In langgraph.json, it is set up this way:

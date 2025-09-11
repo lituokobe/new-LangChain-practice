@@ -9,6 +9,10 @@ from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain_core.runnables import RunnableWithMessageHistory
 from new_langchaing_practice.models import multimodal_llm
 
+# # test of the multimodal model
+# resp = multimodal_llm.invoke([HumanMessage(content = "Do you know what is soccer?")])
+# print(resp.content)
+
 prompt = ChatPromptTemplate([
     ("system", "You are a multimodal AI assistant. You can take test, voice and image input."),
     MessagesPlaceholder(variable_name = "messages"),
@@ -37,17 +41,12 @@ def transcribe_audio(audio_path):
         with open(audio_path, 'rb') as audio_file:
             audio_data = base64.b64encode(audio_file.read()).decode('utf-8')
         # Qwen model format:
-        # audio_message = {  # 把音频文件，封装成一条消息
-        #     "type": "audio_url",
-        #     "audio_url": {
-        #         "url": f"data:audio/wav;base64,{audio_data}",
-        #         "duration": 30  # 单位：秒（帮助模型优化处理）
-        #     }
-        # }
-
         audio_message = {  # 把音频文件，封装成一条消息
-            "type": "audio",
-            "audio": f"data:audio/wav;base64,{audio_data}",
+            "type": "audio_url",
+            "audio_url": {
+                "url": f"data:audio/wav;base64,{audio_data}",
+                # "duration": 30  # 单位：秒（帮助模型优化处理）
+            }
         }
         return audio_message
     except Exception as e:
@@ -71,8 +70,11 @@ def transcribe_image(image_path):
 
         image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
         return {
-            "type": "image",
-            "image": f"data:image/{img_format.lower()};base64,{image_data}"
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/{img_format.lower()};base64,{image_data}",
+                "detail": 'low'
+            }
         }
 
 def add_message(history, messages):
@@ -80,7 +82,7 @@ def add_message(history, messages):
     Add user's message to chat history
     """
     for m in messages["files"]:
-        print(m)
+        # print(m)
         history.append({"role": "user", "content": {"path": m}})
     if messages["text"] is not None:
         history.append({"role": "user", "content": messages["text"]})
@@ -105,88 +107,35 @@ def get_last_user_after_assistant(history):
         # first user after assistant
         return history[last_assistant_idx + 1:]
 
-# def submit_messages(history):
-#     """
-#     Submit user input, generate chatbot reply
-#     """
-#     user_messages = get_last_user_after_assistant(history)
-#     print(user_messages)
-#     content = []
-#     if user_messages:
-#         for x in user_messages:
-#             if isinstance(x["content"], str): # this means the content is text
-#                 content.append(x["content"])
-#             elif isinstance(x["content"], tuple): #multimeida content
-#                 file_path = x ["content"][0] # get the multimedia file's path
-#                 if file_path.endswith(".wav"): # it is a audio file
-#                     file_message = transcribe_audio(file_path)
-#                 elif file_path.endswith(".jpg") or file_path.endswith(".png") or file_path.endswith(".jpeg"):
-#                     file_message = transcribe_image(file_path)
-#                 content.append(file_message)
-#             else:
-#                 pass
-#     input_message = HumanMessage(content = content)
-#
-#     resp = chain_history.invoke({"messages" : input_message}, config)
-#     history.append({"role" : "assistant", "content" : resp.content})
-#
-#     return history
 def submit_messages(history):
+    """
+    Submit user input, generate chatbot reply
+    """
     user_messages = get_last_user_after_assistant(history)
-    if not user_messages:
-        return history
-
+    # print(user_messages)
     content = []
+    if user_messages:
+        for x in user_messages:
+            print(x)
+            if isinstance(x["content"], str): # this means the content is text
+                content.append({"type": "text", "text": x["content"]})
+            elif isinstance(x["content"], tuple): #multimeida content
+                file_path = x ["content"][0] # get the multimedia file's path
+                if file_path.endswith(".wav") or file_path.endswith(".mp3"): # it is a audio file
+                    file_message = transcribe_audio(file_path)
+                elif file_path.endswith(".jpg") or file_path.endswith(".png") or file_path.endswith(".jpeg"):
+                    file_message = transcribe_image(file_path)
+                content.append(file_message)
+            else:
+                pass
 
-    # Extract text and files
-    text_parts = []
-    media_parts = []
 
-    for x in user_messages:
-        if isinstance(x["content"], str) and x["content"].strip():
-            text_parts.append(x["content"])
-        elif isinstance(x["content"], tuple):
-            file_path = x["content"][0]
-            if file_path.endswith(".wav"):
-                msg = transcribe_audio(file_path)
-                if msg:
-                    media_parts.append(msg)
-            elif file_path.endswith((".jpg", ".png", ".jpeg")):
-                msg = transcribe_image(file_path)
-                if msg:
-                    media_parts.append(msg)
+    input_message = HumanMessage(content = content)
+    resp = chain_history.invoke({"messages" : input_message}, config)
 
-    # ✅ Always include descriptive text
-    if media_parts:
-        if not text_parts:
-            # 🛠 Add fallback text if user didn't type anything
-            text_parts.append("Please analyze this audio.")
-        # ✅ Append text first, then media
-        content.extend(text_parts)
-        content.extend(media_parts)
-    else:
-        # Only text
-        content.extend(text_parts)
-
-    input_message = HumanMessage(content=content)
-
-    try:
-        resp = chain_history.invoke(
-            {"messages": [input_message]},
-            config=config
-        )
-        history.append({"role": "assistant", "content": resp.content})
-    except Exception as e:
-        print("LLM invocation error:", e)
-        history.append({"role": "assistant", "content": "Sorry, I couldn't process your request."})
+    history.append({"role" : "assistant", "content" : resp.content})
 
     return history
-
-
-# user_msg: HumanMessage = HumanMessage(content = [{"type":"text", "text" : "What's the highest mountain in the world?"}])
-#
-# resp1 = chain_history.invoke({"messages" : [user_msg]}, config)
-# print(resp1.content)
 
 #TODO: use Gradio to develop a GUI for the chatbot
 with gr.Blocks(title = "Multimodal Chatbot", theme = gr.themes.Soft()) as block:

@@ -9,3 +9,5 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
 ALI_API_KEY = os.getenv("ALI_API_KEY")
 ALI_BASE_URL = os.getenv("ALI_BASE_URL")
 
+LOCAL_BASE_URL = os.getenv("LOCAL_BASE_URL")
+
